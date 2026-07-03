@@ -235,19 +235,39 @@
             document.getElementById('statusLog').innerHTML = '';
 
             try {
-                const { GoogleGenAI } = await import('https://esm.run/@google/genai');
+                const { GoogleGenAI, Type } = await import('https://esm.run/@google/genai');
                 const ai = new GoogleGenAI({ apiKey: apiKey });
 
-                const textPrompt = `Generate a unique list matching the request: "${promptInput}". For each item, provide the English word, the written Cantonese Chinese characters, and its phonetic pronunciation in Cantonese Jyutping spelling. Output your response ONLY as a clean, standardized JSON array containing objects matching this format: [{"english": "...", "cantonese": "...", "jyutping": "..."}]`;
+                const textPrompt = `Generate a unique list matching the request: "${promptInput}". For each item, provide the English word, the written Cantonese Chinese characters, and its phonetic pronunciation in Cantonese Jyutping spelling.`;
 
                 logStatus("Requesting target translations from Gemini Flash...");
                 const textResponse = await ai.models.generateContent({
                     model: 'gemini-2.5-flash',
                     contents: textPrompt,
-                    config: { responseMimeType: "application/json" }
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    english: { type: Type.STRING },
+                                    cantonese: { type: Type.STRING },
+                                    jyutping: { type: Type.STRING }
+                                },
+                                required: ["english", "cantonese", "jyutping"]
+                            }
+                        }
+                    }
                 });
 
-                const targetWordList = parseLenientJson(textResponse.text);
+                let targetWordList;
+                try {
+                    targetWordList = parseLenientJson(textResponse.text);
+                } catch (parseErr) {
+                    logStatus(`❌ Could not parse Gemini's response as JSON. Raw output: ${textResponse.text.slice(0, 300)}`);
+                    throw new Error("Gemini returned malformed data. Try a smaller or simpler batch request.");
+                }
                 logStatus(`Discovered ${targetWordList.length} unique terms to generate and record.`);
 
                 for (let i = 0; i < targetWordList.length; i++) {
