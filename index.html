@@ -33,7 +33,6 @@
     </style>
 </head>
 <body>
-    
 
     <div class="nav">
         <button class="nav-btn active" onclick="switchTab('trainer')">🏋️ Dictionary Trainer</button>
@@ -198,6 +197,26 @@
             el.scrollTop = el.scrollHeight;
         }
 
+        // Cleans up common AI JSON output quirks (code fences, trailing commas, stray text)
+        function parseLenientJson(rawText) {
+            let cleaned = rawText.trim();
+            // Strip markdown code fences like ```json ... ```
+            cleaned = cleaned.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '');
+            // Extract just the array/object portion in case of stray leading/trailing text
+            const firstBracket = cleaned.search(/[\[{]/);
+            const lastBracket = Math.max(cleaned.lastIndexOf(']'), cleaned.lastIndexOf('}'));
+            if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+                cleaned = cleaned.slice(firstBracket, lastBracket + 1);
+            }
+            try {
+                return JSON.parse(cleaned);
+            } catch (e) {
+                // Remove trailing commas before ] or } which is the most common model slip
+                const noTrailingCommas = cleaned.replace(/,(\s*[\]}])/g, '$1');
+                return JSON.parse(noTrailingCommas);
+            }
+        }
+
         // --- BATCH AI GENERATION ENGINE ---
         async function runBatchGeneration() {
             saveConfig();
@@ -228,7 +247,7 @@
                     config: { responseMimeType: "application/json" }
                 });
 
-                const targetWordList = JSON.parse(textResponse.text);
+                const targetWordList = parseLenientJson(textResponse.text);
                 logStatus(`Discovered ${targetWordList.length} unique terms to generate and record.`);
 
                 for (let i = 0; i < targetWordList.length; i++) {
