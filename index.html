@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cantonese Flashcard Dictionary & Trainer</title>
+    <script src="https://cdn.jsdelivr.net/npm/@google/genai@0.1.1/dist/index.umd.min.js"></script>
+    <style>
+        :root { --primary: #4285f4; --success: #34a853; --warn: #f4b400; --danger: #ea4335; --bg: #f8f9fa; --text: #202124; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .nav-btn { background: none; border: none; padding: 10px 20px; font-size: 16px; cursor: pointer; font-weight: bold; color: #5f6368; }
+        .nav-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        input, select { flex: 1; padding: 12px; border: 1px solid #dadce0; border-radius: 8px; font-size: 16px; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .quiz-container { text-align: center; max-width: 600px; margin: 0 auto; }
+        .quiz-char { font-size: 72px; font-weight: bold; color: var(--primary); margin: 20px 0 5px 0; letter-spacing: 2px; }
+        .quiz-jyutping { font-size: 24px; color: #5f6368; font-style: italic; margin-bottom: 25px; }
+        .quiz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 25px; }
+        .quiz-option { border: 3px solid #dadce0; border-radius: 12px; overflow: hidden; cursor: pointer; background: white; transition: all 0.2s; aspect-ratio: 1/1; position: relative; }
+        .quiz-option:hover { border-color: var(--primary); transform: scale(1.02); }
+        .quiz-option img { width: 100%; height: 100%; object-fit: cover; }
+        .quiz-option.correct { border-color: var(--success); box-shadow: 0 0 12px rgba(52,168,83,0.5); }
+        .quiz-option.wrong { border-color: var(--danger); opacity: 0.6; }
+        #statusLog { background: #333; color: #00ff00; font-family: monospace; padding: 15px; border-radius: 6px; max-height: 150px; overflow-y: auto; font-size: 13px; margin-top: 15px; display: none; }
+        .stats-badge { background: #e8f0fe; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-block; margin-bottom: 15px; }
+        .flex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        #printFrame { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="nav">
+        <button class="nav-btn active" onclick="switchTab('trainer')">🏋️ Dictionary Trainer</button>
+        <button class="nav-btn" onclick="switchTab('manager')">⚙️ AI Database Manager</button>
+    </div>
+
+    <!-- CONFIGURATION PANEL -->
+    <div class="card">
+        <h3>🔑 Cloud Credentials & API Verification</h3>
+        <div class="input-group">
+            <input type="password" id="apiKey" placeholder="Gemini API Key...">
+            <input type="password" id="ghToken" placeholder="GitHub Personal Access Token (classic)...">
+        </div>
+        <div class="input-group">
+            <input type="text" id="ghRepo" placeholder="GitHub Repository Path (e.g., username/repository-name)">
+            <button style="background: var(--success);" onclick="syncFromGitHub()">🔄 Force Pull Repo Database</button>
+            <span id="dbCount" class="stats-badge" style="margin: auto 0;">Database: 0 words</span>
+        </div>
+    </div>
+
+    <!-- TAB 1: EDUCATIONAL QUIZ TRAINER -->
+    <div id="tab-trainer" class="tab-content active">
+        <div class="card">
+            <div class="flex-header">
+                <div class="input-group" style="max-width: 300px; margin: 0;">
+                    <select id="quizTagFilter" onchange="loadNewQuizQuestion()">
+                        <option value="all">All Subcategories</option>
+                    </select>
+                </div>
+                <button style="background: #6200ee;" onclick="generatePrintableFlashcards()">🖨️ Print Category Flashcards</button>
+            </div>
+
+            <div class="quiz-container">
+                <div id="quizPlayArea" style="display: none;">
+                    <div id="quizChar" class="quiz-char">--</div>
+                    <div id="quizJyutping" class="quiz-jyutping">--</div>
+                    <button style="background: var(--success);" onclick="playQuizAudio()">🔊 Listen Pronunciation</button>
+
+                    <div class="quiz-grid" id="quizGrid"></div>
+                    <div id="quizFeedback" style="margin-top: 20px; font-size: 20px; font-weight: bold;"></div>
+                    <button id="nextBtn" style="margin-top: 20px; display: none; background: #5f6368;" onclick="loadNewQuizQuestion()">Next Word ➡️</button>
+                </div>
+                <div id="quizEmptyArea" style="color: #666; padding: 40px 0;">
+                    <p>Your dictionary database is empty. Go to the <strong>AI Database Manager</strong> tab to build data sets!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: BATCH AI GENERATION MANAGER -->
+    <div id="tab-manager" class="tab-content">
+        <div class="card">
+            <h3>Smart Batch Vocabulary Generator</h3>
+            <p>Tell Gemini what vocabulary block you want to create. It will translate everything, assign tags, build custom art assets, and push them immediately to GitHub.</p>
+
+            <div class="input-group">
+                <input type="text" id="generationPrompt" placeholder="e.g., 10 basic colors, 15 everyday tools...">
+                <input type="text" id="customTag" placeholder="Tag label (colors, tools, animals)">
+                <button onclick="runBatchGeneration()">Generate & Push to GitHub</button>
+            </div>
+            <div id="statusOutput" style="font-weight: bold; color: var(--primary);"></div>
+            <div id="statusLog"></div>
+        </div>
+    </div>
+
+    <iframe id="printFrame" title="Print Output Layer"></iframe>
+
+    <script>
+        // Local state cache mirrored with GitHub
+        let dictionaryDb = [];
+        let currentCorrectWord = null;
+
+        // Load config from localStorage on boot to save typing
+        window.onload = function() {
+            if (localStorage.getItem('dict_apiKey')) document.getElementById('apiKey').value = localStorage.getItem('dict_apiKey');
+            if (localStorage.getItem('dict_ghToken')) document.getElementById('ghToken').value = localStorage.getItem('dict_ghToken');
+            if (localStorage.getItem('dict_ghRepo')) document.getElementById('ghRepo').value = localStorage.getItem('dict_ghRepo');
+            syncFromGitHub();
+        };
+
+        function saveConfig() {
+            localStorage.setItem('dict_apiKey', document.getElementById('apiKey').value);
+            localStorage.setItem('dict_ghToken', document.getElementById('ghToken').value);
+            localStorage.setItem('dict_ghRepo', document.getElementById('ghRepo').value);
+        }
+
+        // --- GITHUB REPOSITORY SYNC ENGINE ---
+        async function syncFromGitHub() {
+            saveConfig();
+            const token = document.getElementById('ghToken').value;
+            const repo = document.getElementById('ghRepo').value;
+            if (!token || !repo) return;
+
+            try {
+                const url = `https://api.github.com/repos/${repo}/contents/database.json`;
+                const res = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+
+                if (res.status === 200) {
+                    const fileData = await res.json();
+                    dictionaryDb = JSON.parse(decodeURIComponent(escape(atob(fileData.content))));
+                    window.ghFileSha = fileData.sha; // Save tracking hash for modifications
+                } else if (res.status === 404) {
+                    dictionaryDb = []; // Clean initialization if file doesn't exist
+                    window.ghFileSha = null;
+                }
+                updateDatabaseMetrics();
+            } catch (e) {
+                console.error("Error reading from GitHub:", e);
+            }
+        }
+
+        async function pushToGitHub() {
+            const token = document.getElementById('ghToken').value;
+            const repo = document.getElementById('ghRepo').value;
+            if (!token || !repo) { alert("Missing GitHub Token or Repo path."); return; }
+
+            const url = `https://api.github.com/repos/${repo}/contents/database.json`;
+            const payload = {
+                message: "system: automated batch dictionary data inject",
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(dictionaryDb, null, 2))))
+            };
+            if (window.ghFileSha) payload.sha = window.ghFileSha;
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                const resData = await response.json();
+                window.ghFileSha = resData.content.sha; // Refresh file marker tracking hash
+                logStatus("Successfully committed database to GitHub.");
+            } else {
+                const errText = await response.text();
+                throw new Error("GitHub sync failed: " + errText);
+            }
+        }
+
+        function updateDatabaseMetrics() {
+            document.getElementById('dbCount').innerText = `Database: ${dictionaryDb.length} words`;
+            const currentSelection = document.getElementById('quizTagFilter').value;
+            const tags = [...new Set(dictionaryDb.map(r => r.tag).filter(Boolean))];
+            const selectEl = document.getElementById('quizTagFilter');
+            selectEl.innerHTML = '<option value="all">All Subcategories</option>';
+            tags.forEach(tag => { selectEl.innerHTML += `<option value="${tag}">${tag}</option>`; });
+            if (tags.includes(currentSelection)) selectEl.value = currentSelection;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            if (tabId === 'trainer') loadNewQuizQuestion();
+        }
+
+        function logStatus(msg) {
+            const el = document.getElementById('statusLog');
+            el.style.display = 'block';
+            el.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+
+        // --- BATCH AI GENERATION ENGINE ---
+        async function runBatchGeneration() {
+            saveConfig();
+            const apiKey = document.getElementById('apiKey').value;
+            const promptInput = document.getElementById('generationPrompt').value.trim();
+            let tagInput = document.getElementById('customTag').value.trim().toLowerCase();
+            const statusOutput = document.getElementById('statusOutput');
+
+            if (!apiKey || !promptInput) { alert("Please input your Gemini API Key and a clear generation request."); return; }
+            if (!tagInput) { tagInput = "general"; }
+
+            statusOutput.innerText = "Syncing baseline data repository...";
+            await syncFromGitHub();
+
+            statusOutput.innerText = "Processing batch request with Gemini AI...";
+            document.getElementById('statusLog').innerHTML = '';
+
+            try {
+                const ai = new window.GoogleGenAI({ apiKey: apiKey });
+
+                const textPrompt = `Generate a unique list matching the request: "${promptInput}". For each item, provide the English word, the written Cantonese Chinese characters, and its phonetic pronunciation in Cantonese Jyutping spelling. Output your response ONLY as a clean, standardized JSON array containing objects matching this format: [{"english": "...", "cantonese": "...", "jyutping": "..."}]`;
+
+                logStatus("Requesting target translations from Gemini Flash...");
+                const textResponse = await ai.models.generateContent({
+                    model: 'gemini-2.5-flash',
+                    contents: textPrompt,
+                    config: { responseMimeType: "application/json" }
+                });
+
+                const targetWordList = JSON.parse(textResponse.text);
+                logStatus(`Discovered ${targetWordList.length} unique terms to generate and record.`);
+
+                for (let i = 0; i < targetWordList.length; i++) {
+                    const entry = targetWordList[i];
+                    statusOutput.innerText = `Generating Visual Assets: Progress ${i + 1}/${targetWordList.length} (${entry.english})...`;
+                    logStatus(`Calling Imagen engine for visual asset: "${entry.english}"...`);
+
+                    try {
+                        const imageResponse = await ai.models.generateImages({
+                            model: 'imagen-3.0-generate-002',
+                            prompt: `An isolated clean conceptual icon or vibrant illustration representing the noun "${entry.english}", minimalist vector art styling, crisp details, solid white background`,
+                            config: { numberOfImages: 1, outputMimeType: "image/jpeg", aspectRatio: "1:1" }
+                        });
+
+                        const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
+
+                        const completeRecord = {
+                            id: entry.english.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+                            english: entry.english,
+                            cantonese: entry.cantonese,
+                            jyutping: entry.jyutping,
+                            tag: tagInput,
+                            imageBytes: base64ImageBytes
+                        };
+
+                        // Strip duplicates out of our tracking list state array
+                        dictionaryDb = dictionaryDb.filter(item => item.id !== completeRecord.id);
+                        dictionaryDb.push(completeRecord);
+                        logStatus(`Processed: [${entry.english}]`);
+                    } catch (imageErr) {
+                        logStatus(`⚠️ Warning: Image asset generation error skipped for ${entry.english}: ${imageErr.message}`);
+                    }
+                }
+
+                statusOutput.innerText = "Pushing completed records to GitHub...";
+                await pushToGitHub();
+                statusOutput.innerText = "🎉 All batch records processed, saved, and synced!";
+                updateDatabaseMetrics();
+            } catch (err) {
+                console.error(err);
+                statusOutput.innerText = "Fatal processing error occurred.";
+                logStatus(`❌ Processing halted due to error: ${err.message}`);
+            }
+        }
+
+        // --- TRAINER QUIZ ENGINE ---
+        async function loadNewQuizQuestion() {
+            const filterTag = document.getElementById('quizTagFilter').value;
+            let records = [...dictionaryDb];
+            if (filterTag !== 'all') { records = records.filter(r => r.tag === filterTag); }
+
+            if (records.length < 4) {
+                document.getElementById('quizPlayArea').style.display = 'none';
+                document.getElementById('quizEmptyArea').style.display = 'block';
+                document.getElementById('quizEmptyArea').innerHTML = `<p>You need at least <strong>4 entries</strong> tagged with "${filterTag}" in your database to populate the quiz choices grid.</p>`;
+                return;
+            }
+
+            document.getElementById('quizEmptyArea').style.display = 'none';
+            document.getElementById('quizPlayArea').style.display = 'block';
+            document.getElementById('quizFeedback').innerText = '';
+            document.getElementById('nextBtn').style.display = 'none';
+
+            const randomIndex = Math.floor(Math.random() * records.length);
+            currentCorrectWord = records[randomIndex];
+            document.getElementById('quizChar').innerText = currentCorrectWord.cantonese;
+            document.getElementById('quizJyutping').innerText = `Jyutping: ${currentCorrectWord.jyutping}`;
+            playQuizAudio();
+
+            const decoys = records.filter(r => r.id !== currentCorrectWord.id);
+            const shuffledDecoys = decoys.sort(() => 0.5 - Math.random()).slice(0, 3);
+            const choicesList = [currentCorrectWord, ...shuffledDecoys].sort(() => 0.5 - Math.random());
+
+            const gridEl = document.getElementById('quizGrid');
+            gridEl.innerHTML = '';
+            choicesList.forEach(word => {
+                const optionBtn = document.createElement('div');
+                optionBtn.className = 'quiz-option';
+                optionBtn.dataset.wordId = word.id;
+                optionBtn.onclick = () => verifyQuizAnswer(optionBtn, word.id);
+                const img = document.createElement('img');
+                img.src = `data:image/jpeg;base64,${word.imageBytes}`;
+                optionBtn.appendChild(img);
+                gridEl.appendChild(optionBtn);
+            });
+        }
+
+        function verifyQuizAnswer(selectedElement, selectedId) {
+            if (document.getElementById('nextBtn').style.display === 'block') return;
+            const feedbackEl = document.getElementById('quizFeedback');
+
+            if (selectedId === currentCorrectWord.id) {
+                selectedElement.classList.add('correct');
+                feedbackEl.innerHTML = `<span style="color: var(--success);">🎯 Correct! The translation is: "${currentCorrectWord.english}"</span>`;
+            } else {
+                selectedElement.classList.add('wrong');
+                feedbackEl.innerHTML = `<span style="color: var(--danger);">❌ Try again!</span>`;
+                document.querySelectorAll('.quiz-option').forEach(opt => {
+                    if (opt.dataset.wordId === currentCorrectWord.id) opt.classList.add('correct');
+                });
+            }
+            document.getElementById('nextBtn').style.display = 'block';
+        }
+
+        function playQuizAudio() {
+            if (currentCorrectWord && currentCorrectWord.cantonese) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(currentCorrectWord.cantonese);
+                utterance.lang = 'zh-HK';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        async function generatePrintableFlashcards() {
+            const filterTag = document.getElementById('quizTagFilter').value;
+            let records = [...dictionaryDb];
+            if (filterTag !== 'all') { records = records.filter(r => r.tag === filterTag); }
+            if (records.length === 0) { alert("No records found to print."); return; }
+
+            const cardsPerPage = 4;
+            let totalHtml = "";
+            const printStyles = `<style>
+                @page { size: letter portrait; margin: 0.5in; }
+                body { margin: 0; font-family: sans-serif; }
+                .page-break { page-break-after: always; clear: both; }
+                .grid-sheet { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 7.5in; height: 10in; box-sizing: border-box; }
+                .card-frame { border: 1px dashed #bbb; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; height: 5in; width: 3.75in; }
+                .front-img { width: 2.2in; height: 2.2in; object-fit: cover; border-radius: 6px; margin-bottom: 12px; }
+                .front-title { font-size: 24px; font-weight: bold; }
+                .front-phonetic { font-size: 16px; color: #555; font-style: italic; }
+                .back-char { font-size: 64px; font-weight: bold; }
+            </style>`;
+
+            for (let i = 0; i < records.length; i += cardsPerPage) {
+                let pageChunk = records.slice(i, i + cardsPerPage);
+                while (pageChunk.length < cardsPerPage) { pageChunk.push({ id: "", english: "", cantonese: "", jyutping: "", imageBytes: "" }); }
+
+                totalHtml += `<div class="grid-sheet">`;
+                pageChunk.forEach(word => {
+                    if (word.id) {
+                        totalHtml += `<div class="card-frame"><img class="front-img" src="data:image/jpeg;base64,${word.imageBytes}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div></div>`;
+                    } else {
+                        totalHtml += `<div class="card-frame"></div>`;
+                    }
+                });
+                totalHtml += `</div><div class="page-break"></div><div class="grid-sheet">`;
+
+                [1, 0].forEach(index => {
+                    const word = pageChunk[index];
+                    if (word && word.id) {
+                        totalHtml += `<div class="card-frame"><div class="back-char">${word.cantonese}</div></div>`;
+                    } else {
+                        totalHtml += `<div class="card-frame"></div>`;
+                    }
+                });
+                totalHtml += `</div>`;
+
+                if (i + cardsPerPage < records.length) totalHtml += `<div class="page-break"></div>`;
+            }
+
+            const iframe = document.getElementById('printFrame');
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(printStyles + totalHtml);
+            doc.close();
+            setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
+        }
+    </script>
+</body>
+</html>
