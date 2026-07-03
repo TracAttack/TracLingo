@@ -240,7 +240,7 @@
             if (!hfToken) {
                 throw new Error("Missing Hugging Face token. Get a free one at huggingface.co/settings/tokens");
             }
-            const url = 'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell';
+            const url = 'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell';
 
             let lastError;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
