@@ -86,7 +86,7 @@
     <div id="tab-manager" class="tab-content">
         <div class="card">
             <h3>Smart Batch Vocabulary Generator</h3>
-            <p>Tell Gemini what vocabulary block you want to create. It will translate everything, assign tags, build custom art assets, and push them immediately to GitHub.</p>
+            <p>Tell Gemini what vocabulary block you want to create. It will translate everything, assign tags, generate art with Pollinations.ai, and push both the data and image files straight to GitHub.</p>
 
             <div class="input-group">
                 <input type="text" id="generationPrompt" placeholder="e.g., 10 basic colors, 15 everyday tools...">
@@ -217,6 +217,72 @@
             }
         }
 
+        // --- POLLINATIONS.AI IMAGE GENERATION (free, no API key required) ---
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        async function fetchPollinationsImageBase64(prompt) {
+            const seed = Math.floor(Math.random() * 1000000);
+            const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true&seed=${seed}`;
+            const res = await fetch(url);
+            if (!res.ok) {
+                throw new Error(`Pollinations request failed with status ${res.status}`);
+            }
+            const blob = await res.blob();
+            return await blobToBase64(blob);
+        }
+
+        // --- GITHUB ASSET (binary file) PUSH ENGINE ---
+        async function getExistingFileSha(path) {
+            const token = document.getElementById('ghToken').value;
+            const repo = document.getElementById('ghRepo').value;
+            try {
+                const res = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+                if (res.status === 200) {
+                    const data = await res.json();
+                    return data.sha;
+                }
+            } catch (e) {
+                // File doesn't exist yet, no sha needed
+            }
+            return null;
+        }
+
+        async function pushImageAssetToGitHub(path, base64Content) {
+            const token = document.getElementById('ghToken').value;
+            const repo = document.getElementById('ghRepo').value;
+            const existingSha = await getExistingFileSha(path);
+
+            const payload = {
+                message: `assets: add/update ${path}`,
+                content: base64Content
+            };
+            if (existingSha) payload.sha = existingSha;
+
+            const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`Failed to push asset ${path}: ${errText}`);
+            }
+            return true;
+        }
+
         // --- BATCH AI GENERATION ENGINE ---
         async function runBatchGeneration() {
             saveConfig();
@@ -273,28 +339,29 @@
                 for (let i = 0; i < targetWordList.length; i++) {
                     const entry = targetWordList[i];
                     statusOutput.innerText = `Generating Visual Assets: Progress ${i + 1}/${targetWordList.length} (${entry.english})...`;
-                    logStatus(`Calling Imagen engine for visual asset: "${entry.english}"...`);
+                    logStatus(`Requesting Pollinations image for "${entry.english}"...`);
 
                     try {
-                        const imageResponse = await ai.models.generateContent({
-                            model: 'gemini-2.5-flash-image',
-                            contents: `An isolated clean conceptual icon or vibrant illustration representing the noun "${entry.english}", minimalist vector art styling, crisp details, solid white background`
-                        });
+                        const imagePrompt = `An isolated clean conceptual icon or vibrant illustration representing the noun "${entry.english}", minimalist vector art styling, crisp details, solid white background`;
+                        const base64Png = await fetchPollinationsImageBase64(imagePrompt);
 
-                        const parts = imageResponse?.candidates?.[0]?.content?.parts || [];
-                        const imagePart = parts.find(p => p.inlineData && p.inlineData.data);
-                        if (!imagePart) {
-                            throw new Error("No image data returned in response.");
-                        }
-                        const base64ImageBytes = imagePart.inlineData.data;
+                        const id = entry.english.toLowerCase().replace(/[^a-z0-9]/g, "_");
+                        const assetPath = `assets/${id}.png`;
+
+                        logStatus(`Uploading asset to ${assetPath}...`);
+                        await pushImageAssetToGitHub(assetPath, base64Png);
+
+                        const repo = document.getElementById('ghRepo').value;
+                        const imageUrl = `https://raw.githubusercontent.com/${repo}/main/${assetPath}?v=${Date.now()}`;
 
                         const completeRecord = {
-                            id: entry.english.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+                            id: id,
                             english: entry.english,
                             cantonese: entry.cantonese,
                             jyutping: entry.jyutping,
                             tag: tagInput,
-                            imageBytes: base64ImageBytes
+                            imagePath: assetPath,
+                            imageUrl: imageUrl
                         };
 
                         // Strip duplicates out of our tracking list state array
@@ -302,7 +369,7 @@
                         dictionaryDb.push(completeRecord);
                         logStatus(`Processed: [${entry.english}]`);
                     } catch (imageErr) {
-                        logStatus(`⚠️ Warning: Image asset generation error skipped for ${entry.english}: ${imageErr.message}`);
+                        logStatus(`⚠️ Warning: Image asset generation/upload error skipped for ${entry.english}: ${imageErr.message}`);
                     }
                 }
 
@@ -353,7 +420,7 @@
                 optionBtn.dataset.wordId = word.id;
                 optionBtn.onclick = () => verifyQuizAnswer(optionBtn, word.id);
                 const img = document.createElement('img');
-                img.src = `data:image/png;base64,${word.imageBytes}`;
+                img.src = word.imageUrl || `data:image/png;base64,${word.imageBytes}`;
                 optionBtn.appendChild(img);
                 gridEl.appendChild(optionBtn);
             });
@@ -412,7 +479,8 @@
                 totalHtml += `<div class="grid-sheet">`;
                 pageChunk.forEach(word => {
                     if (word.id) {
-                        totalHtml += `<div class="card-frame"><img class="front-img" src="data:image/png;base64,${word.imageBytes}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div></div>`;
+                        const src = word.imageUrl || `data:image/png;base64,${word.imageBytes}`;
+                        totalHtml += `<div class="card-frame"><img class="front-img" src="${src}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div></div>`;
                     } else {
                         totalHtml += `<div class="card-frame"></div>`;
                     }
