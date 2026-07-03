@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Cantonese Flashcard Dictionary & Trainer</title>
-    <script src="https://cdn.jsdelivr.net/npm/@google/genai@0.1.1/dist/index.umd.min.js"></script>
     <style>
         :root { --primary: #4285f4; --success: #34a853; --warn: #f4b400; --danger: #ea4335; --bg: #f8f9fa; --text: #202124; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -216,7 +215,8 @@
             document.getElementById('statusLog').innerHTML = '';
 
             try {
-                const ai = new window.GoogleGenAI({ apiKey: apiKey });
+                const { GoogleGenAI } = await import('https://esm.run/@google/genai');
+                const ai = new GoogleGenAI({ apiKey: apiKey });
 
                 const textPrompt = `Generate a unique list matching the request: "${promptInput}". For each item, provide the English word, the written Cantonese Chinese characters, and its phonetic pronunciation in Cantonese Jyutping spelling. Output your response ONLY as a clean, standardized JSON array containing objects matching this format: [{"english": "...", "cantonese": "...", "jyutping": "..."}]`;
 
