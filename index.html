@@ -256,13 +256,17 @@
                     logStatus(`Calling Imagen engine for visual asset: "${entry.english}"...`);
 
                     try {
-                        const imageResponse = await ai.models.generateImages({
-                            model: 'imagen-3.0-generate-002',
-                            prompt: `An isolated clean conceptual icon or vibrant illustration representing the noun "${entry.english}", minimalist vector art styling, crisp details, solid white background`,
-                            config: { numberOfImages: 1, outputMimeType: "image/jpeg", aspectRatio: "1:1" }
+                        const imageResponse = await ai.models.generateContent({
+                            model: 'gemini-2.5-flash-image',
+                            contents: `An isolated clean conceptual icon or vibrant illustration representing the noun "${entry.english}", minimalist vector art styling, crisp details, solid white background`
                         });
 
-                        const base64ImageBytes = imageResponse.generatedImages[0].image.imageBytes;
+                        const parts = imageResponse?.candidates?.[0]?.content?.parts || [];
+                        const imagePart = parts.find(p => p.inlineData && p.inlineData.data);
+                        if (!imagePart) {
+                            throw new Error("No image data returned in response.");
+                        }
+                        const base64ImageBytes = imagePart.inlineData.data;
 
                         const completeRecord = {
                             id: entry.english.toLowerCase().replace(/[^a-z0-9]/g, "_"),
@@ -329,7 +333,7 @@
                 optionBtn.dataset.wordId = word.id;
                 optionBtn.onclick = () => verifyQuizAnswer(optionBtn, word.id);
                 const img = document.createElement('img');
-                img.src = `data:image/jpeg;base64,${word.imageBytes}`;
+                img.src = `data:image/png;base64,${word.imageBytes}`;
                 optionBtn.appendChild(img);
                 gridEl.appendChild(optionBtn);
             });
@@ -388,7 +392,7 @@
                 totalHtml += `<div class="grid-sheet">`;
                 pageChunk.forEach(word => {
                     if (word.id) {
-                        totalHtml += `<div class="card-frame"><img class="front-img" src="data:image/jpeg;base64,${word.imageBytes}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div></div>`;
+                        totalHtml += `<div class="card-frame"><img class="front-img" src="data:image/png;base64,${word.imageBytes}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div></div>`;
                     } else {
                         totalHtml += `<div class="card-frame"></div>`;
                     }
