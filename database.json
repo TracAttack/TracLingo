@@ -144,15 +144,6 @@
     "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/cat.png?v=1783142521923"
   },
   {
-    "id": "bird",
-    "english": "Bird",
-    "cantonese": "雀",
-    "jyutping": "zoek3",
-    "tag": "animals",
-    "imagePath": "assets/bird.png",
-    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/bird.png?v=1783142527839"
-  },
-  {
     "id": "fish",
     "english": "Fish",
     "cantonese": "魚",
@@ -160,5 +151,14 @@
     "tag": "animals",
     "imagePath": "assets/fish.png",
     "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/fish.png?v=1783142533942"
+  },
+  {
+    "id": "bird",
+    "english": "Bird",
+    "cantonese": "雀",
+    "jyutping": "zoek3",
+    "tag": "animals",
+    "imagePath": "assets/bird.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/bird.png?v=1783142730849"
   }
 ]
