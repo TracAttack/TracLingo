@@ -52,7 +52,7 @@
             <span id="dbCount" class="stats-badge" style="margin: auto 0;">Database: 0 words</span>
         </div>
         <div class="input-group">
-            <input type="password" id="hfToken" placeholder="Hugging Face API Token (get free at huggingface.co/settings/tokens)...">
+            <input type="password" id="pollinationsKey" placeholder="Pollinations API Key (get free at enter.pollinations.ai)...">
         </div>
     </div>
 
@@ -89,7 +89,7 @@
     <div id="tab-manager" class="tab-content">
         <div class="card">
             <h3>Smart Batch Vocabulary Generator</h3>
-            <p>Tell Gemini what vocabulary block you want to create. It will translate everything, assign tags, generate art with Hugging Face's free FLUX model (get a free token at <a href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co/settings/tokens</a> — no credit card needed), and push both the data and image files straight to GitHub.</p>
+            <p>Tell Gemini what vocabulary block you want to create. It will translate everything, assign tags, generate art with Pollinations.ai (requires a free key from <a href="https://enter.pollinations.ai" target="_blank">enter.pollinations.ai</a> — no credit card needed), and push both the data and image files straight to GitHub.</p>
 
             <div class="input-group">
                 <input type="text" id="generationPrompt" placeholder="e.g., 10 basic colors, 15 everyday tools...">
@@ -113,7 +113,7 @@
             if (localStorage.getItem('dict_apiKey')) document.getElementById('apiKey').value = localStorage.getItem('dict_apiKey');
             if (localStorage.getItem('dict_ghToken')) document.getElementById('ghToken').value = localStorage.getItem('dict_ghToken');
             if (localStorage.getItem('dict_ghRepo')) document.getElementById('ghRepo').value = localStorage.getItem('dict_ghRepo');
-            if (localStorage.getItem('dict_hfToken')) document.getElementById('hfToken').value = localStorage.getItem('dict_hfToken');
+            if (localStorage.getItem('dict_pollinationsKey')) document.getElementById('pollinationsKey').value = localStorage.getItem('dict_pollinationsKey');
             syncFromGitHub();
         };
 
@@ -121,7 +121,7 @@
             localStorage.setItem('dict_apiKey', document.getElementById('apiKey').value);
             localStorage.setItem('dict_ghToken', document.getElementById('ghToken').value);
             localStorage.setItem('dict_ghRepo', document.getElementById('ghRepo').value);
-            localStorage.setItem('dict_hfToken', document.getElementById('hfToken').value);
+            localStorage.setItem('dict_pollinationsKey', document.getElementById('pollinationsKey').value);
         }
 
         // --- GITHUB REPOSITORY SYNC ENGINE ---
@@ -222,7 +222,7 @@
             }
         }
 
-        // --- HUGGING FACE INFERENCE API IMAGE GENERATION (free tier, open-source models) ---
+        // --- POLLINATIONS.AI IMAGE GENERATION (GET-based, avoids CORS preflight issues) ---
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -235,51 +235,33 @@
             });
         }
 
-        async function fetchHuggingFaceImageBase64(prompt, maxRetries = 4) {
-            const hfToken = document.getElementById('hfToken').value.trim();
-            if (!hfToken) {
-                throw new Error("Missing Hugging Face token. Get a free one at huggingface.co/settings/tokens");
+        async function fetchPollinationsImageBase64(prompt, maxRetries = 3) {
+            const pollinationsKey = document.getElementById('pollinationsKey').value.trim();
+            if (!pollinationsKey) {
+                throw new Error("Missing Pollinations API key. Get a free one at enter.pollinations.ai");
             }
-            const url = 'https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell';
+            // GET request with key in the query string — no custom headers, so no CORS preflight
+            const url = `https://gen.pollinations.ai/image/${encodeURIComponent(prompt)}?key=${encodeURIComponent(pollinationsKey)}`;
 
             let lastError;
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
                 try {
-                    const res = await fetch(url, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${hfToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ inputs: prompt })
-                    });
-
-                    if (res.ok) {
-                        const blob = await res.blob();
-                        return await blobToBase64(blob);
+                    const res = await fetch(url);
+                    if (!res.ok) {
+                        const errBody = await res.text().catch(() => '');
+                        throw new Error(`status ${res.status} ${errBody.slice(0, 150)}`);
                     }
-
-                    // Model may still be "cold" and loading — HF returns 503 with an estimated_time
-                    let waitSeconds = 3 * attempt;
-                    try {
-                        const errJson = await res.clone().json();
-                        if (errJson.estimated_time) {
-                            waitSeconds = Math.min(errJson.estimated_time + 1, 30);
-                        }
-                        throw new Error(errJson.error || `status ${res.status}`);
-                    } catch (parseErr) {
-                        throw new Error(`status ${res.status}`);
-                    }
+                    const blob = await res.blob();
+                    return await blobToBase64(blob);
                 } catch (e) {
                     lastError = e;
                     if (attempt < maxRetries) {
-                        const waitSeconds = 3 * attempt;
-                        logStatus(`  ↻ Hugging Face attempt ${attempt} failed (${e.message}), model may be warming up, retrying in ${waitSeconds}s...`);
-                        await new Promise(r => setTimeout(r, waitSeconds * 1000));
+                        logStatus(`  ↻ Pollinations attempt ${attempt} failed (${e.message}), retrying...`);
+                        await new Promise(r => setTimeout(r, 2000 * attempt));
                     }
                 }
             }
-            throw new Error(`Hugging Face request failed after ${maxRetries} attempts: ${lastError.message}`);
+            throw new Error(`Pollinations request failed after ${maxRetries} attempts: ${lastError.message}`);
         }
 
         // --- GITHUB ASSET (binary file) PUSH ENGINE ---
@@ -328,13 +310,13 @@
         async function runBatchGeneration() {
             saveConfig();
             const apiKey = document.getElementById('apiKey').value;
-            const hfToken = document.getElementById('hfToken').value.trim();
+            const pollinationsKey = document.getElementById('pollinationsKey').value.trim();
             const promptInput = document.getElementById('generationPrompt').value.trim();
             let tagInput = document.getElementById('customTag').value.trim().toLowerCase();
             const statusOutput = document.getElementById('statusOutput');
 
             if (!apiKey || !promptInput) { alert("Please input your Gemini API Key and a clear generation request."); return; }
-            if (!hfToken) { alert("Please input a Hugging Face API token (free, no card required, at huggingface.co/settings/tokens)."); return; }
+            if (!pollinationsKey) { alert("Please input a Pollinations API key (free, no card required, at enter.pollinations.ai)."); return; }
             if (!tagInput) { tagInput = "general"; }
 
             statusOutput.innerText = "Syncing baseline data repository...";
@@ -382,11 +364,11 @@
                 for (let i = 0; i < targetWordList.length; i++) {
                     const entry = targetWordList[i];
                     statusOutput.innerText = `Generating Visual Assets: Progress ${i + 1}/${targetWordList.length} (${entry.english})...`;
-                    logStatus(`Requesting Hugging Face image for "${entry.english}"...`);
+                    logStatus(`Requesting Pollinations image for "${entry.english}"...`);
 
                     try {
                         const imagePrompt = `An isolated clean conceptual icon or vibrant illustration representing the noun "${entry.english}", minimalist vector art styling, crisp details, solid white background`;
-                        const base64Png = await fetchHuggingFaceImageBase64(imagePrompt);
+                        const base64Png = await fetchPollinationsImageBase64(imagePrompt);
 
                         const id = entry.english.toLowerCase().replace(/[^a-z0-9]/g, "_");
                         const assetPath = `assets/${id}.png`;
