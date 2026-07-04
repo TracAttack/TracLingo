@@ -34,5 +34,95 @@
     "tag": "colors",
     "imagePath": "assets/yellow.png",
     "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/yellow.png?v=1783140345741"
+  },
+   {
+    "id": "har_gao",
+    "english": "har gao",
+    "cantonese": "蝦餃",
+    "jyutping": "haa1 gaau2",
+    "tag": "food",
+    "imagePath": "assets/har_gao.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/har_gao.png"
+  },
+  {
+    "id": "siu_mai",
+    "english": "siu mai",
+    "cantonese": "燒賣",
+    "jyutping": "siu1 maai6",
+    "tag": "food",
+    "imagePath": "assets/siu_mai.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/siu_mai.png"
+  },
+  {
+    "id": "char_siu_bao",
+    "english": "char siu bao",
+    "cantonese": "叉燒包",
+    "jyutping": "caa1 siu1 baau1",
+    "tag": "food",
+    "imagePath": "assets/char_siu_bao.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/char_siu_bao.png"
+  },
+  {
+    "id": "cheung_fan",
+    "english": "cheung fan",
+    "cantonese": "腸粉",
+    "jyutping": "coeng4 fan2",
+    "tag": "food",
+    "imagePath": "assets/cheung_fan.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/cheung_fan.png"
+  },
+  {
+    "id": "juk",
+    "english": "juk",
+    "cantonese": "粥",
+    "jyutping": "zuk1",
+    "tag": "food",
+    "imagePath": "assets/juk.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/juk.png"
+  },
+  {
+    "id": "jai_ha_yuhn",
+    "english": "jai ha yuhn",
+    "cantonese": "炸蝦丸",
+    "jyutping": "zaa3 haa1 jyun2",
+    "tag": "food",
+    "imagePath": "assets/jai_ha_yuhn.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/jai_ha_yuhn.png"
+  },
+  {
+    "id": "lo_bak_gou",
+    "english": "lo bak gou",
+    "cantonese": "蘿蔔糕",
+    "jyutping": "lo4 baak6 gou1",
+    "tag": "food",
+    "imagePath": "assets/lo_bak_gou.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/lo_bak_gou.png"
+  },
+  {
+    "id": "gao_ji",
+    "english": "gao ji",
+    "cantonese": "煎餃子",
+    "jyutping": "zin1 gaau2 zi2",
+    "tag": "food",
+    "imagePath": "assets/gao_ji.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/gao_ji.png"
+  },
+  {
+    "id": "lo_mai_gai",
+    "english": "lo mai gai",
+    "cantonese": "糯米雞",
+    "jyutping": "no6 mai5 gai1",
+    "tag": "food",
+    "imagePath": "assets/lo_mai_gai.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/lo_mai_gai.png"
+  },
+  {
+    "id": "dan_tat",
+    "english": "dan tat",
+    "cantonese": "蛋撻",
+    "jyutping": "daan6 taat1",
+    "tag": "food",
+    "imagePath": "assets/dan_tat.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/dan_tat.png"
   }
 ]
