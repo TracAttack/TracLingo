@@ -88,18 +88,14 @@
 
     <!-- CONFIGURATION PANEL -->
     <div class="card">
-        <h3>🔑 Cloud Credentials & API Verification</h3>
+        <h3>🔑 GitHub Repository Access</h3>
         <div class="input-group">
-            <input type="password" id="apiKey" placeholder="Gemini API Key...">
             <input type="password" id="ghToken" placeholder="GitHub Personal Access Token (classic)...">
+            <input type="text" id="ghRepo" placeholder="GitHub Repository Path (e.g., username/repository-name)">
         </div>
         <div class="input-group">
-            <input type="text" id="ghRepo" placeholder="GitHub Repository Path (e.g., username/repository-name)">
             <button style="background: var(--success);" onclick="syncFromGitHub()">🔄 Force Pull Repo Database</button>
             <span id="dbCount" class="stats-badge" style="margin: auto 0;">Database: 0 words</span>
-        </div>
-        <div class="input-group">
-            <input type="password" id="pollinationsKey" placeholder="Pollinations API Key (get free at enter.pollinations.ai)...">
         </div>
     </div>
 
@@ -152,6 +148,13 @@
 
     <!-- TAB 2: BATCH AI GENERATION MANAGER -->
     <div id="tab-manager" class="tab-content">
+        <div class="card">
+            <h3>🔑 AI Service Credentials</h3>
+            <div class="input-group">
+                <input type="password" id="apiKey" placeholder="Gemini API Key...">
+                <input type="password" id="pollinationsKey" placeholder="Pollinations API Key (get free at enter.pollinations.ai)...">
+            </div>
+        </div>
         <div class="card">
             <h3>Smart Batch Vocabulary Generator</h3>
             <p>Tell Gemini what vocabulary block you want to create. It will translate everything, assign tags, generate art with Pollinations.ai (requires a free key from <a href="https://enter.pollinations.ai" target="_blank">enter.pollinations.ai</a> — no credit card needed), and push both the data and image files straight to GitHub.</p>
