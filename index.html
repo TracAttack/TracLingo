@@ -30,16 +30,22 @@
         .quiz-text-option:hover { border-color: var(--primary); transform: scale(1.02); }
         .quiz-text-option.correct { border-color: var(--success); box-shadow: 0 0 12px rgba(52,168,83,0.5); }
         .quiz-text-option.wrong { border-color: var(--danger); opacity: 0.6; }
+        .quiz-char-option { border: 3px solid #dadce0; border-radius: 12px; padding: 20px; cursor: pointer; background: white; font-size: 40px; font-weight: bold; color: var(--primary); transition: all 0.2s; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 100px; letter-spacing: 1px; }
+        .quiz-char-option:hover { border-color: var(--primary); transform: scale(1.02); }
+        .quiz-char-option.correct { border-color: var(--success); box-shadow: 0 0 12px rgba(52,168,83,0.5); }
+        .quiz-char-option.wrong { border-color: var(--danger); opacity: 0.6; }
         #statusLog { background: #333; color: #00ff00; font-family: monospace; padding: 15px; border-radius: 6px; max-height: 150px; overflow-y: auto; font-size: 13px; margin-top: 15px; display: none; }
         .stats-badge { background: #e8f0fe; color: var(--primary); padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-block; margin-bottom: 15px; }
         .flex-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         #printFrame { display: none; }
         .manage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; margin-top: 15px; }
-        .manage-card { border: 1px solid #dadce0; border-radius: 10px; overflow: hidden; cursor: pointer; text-align: center; background: #fff; transition: box-shadow 0.2s, border-color 0.2s; }
+        .manage-card { border: 1px solid #dadce0; border-radius: 10px; overflow: hidden; cursor: pointer; text-align: center; background: #fff; transition: box-shadow 0.2s, border-color 0.2s; position: relative; }
         .manage-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-color: var(--primary); }
         .manage-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: #f1f3f4; }
         .manage-card .mc-label { padding: 8px 6px 2px; font-size: 13px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .manage-card .mc-tag { font-size: 11px; color: #5f6368; padding-bottom: 8px; }
+        .mc-refresh-btn { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: rgba(0,0,0,0.55); color: white; font-size: 13px; line-height: 1; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .mc-refresh-btn:hover { background: rgba(0,0,0,0.8); }
         .edit-layout { display: flex; gap: 24px; flex-wrap: wrap; }
         .edit-image-col { flex: 0 0 160px; }
         .edit-image-col img { width: 160px; height: 160px; object-fit: cover; border-radius: 8px; border: 1px solid #dadce0; background: #f1f3f4; }
@@ -75,6 +81,10 @@
 
     <!-- TAB 1: EDUCATIONAL QUIZ TRAINER -->
     <div id="tab-trainer" class="tab-content active">
+        <div style="text-align: center; margin-bottom: 15px;">
+            <img id="brandLogo" src="logo.png" alt="Trac Lingo logo" style="width: 60px; height: 60px; display: block; margin: 0 auto;">
+            <div style="font-weight: bold; font-size: 20px; color: var(--primary); margin-top: 4px; letter-spacing: 0.5px;">Trac Lingo</div>
+        </div>
         <div class="card">
             <div class="flex-header">
                 <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
@@ -83,10 +93,11 @@
                             <option value="all">All Subcategories</option>
                         </select>
                     </div>
-                    <div class="input-group" style="max-width: 300px; margin: 0;">
+                    <div class="input-group" style="max-width: 320px; margin: 0;">
                         <select id="quizModeFilter" onchange="loadNewQuizQuestion()">
-                            <option value="listening">🎧 Listening (Pick the Image)</option>
-                            <option value="reading">📖 Reading (Pick the Meaning)</option>
+                            <option value="listen_image">🎧 Listening → Pick the Image</option>
+                            <option value="listen_char">🎧 Listening → Pick the Characters</option>
+                            <option value="read_image">📖 Reading → Pick the Image</option>
                         </select>
                     </div>
                 </div>
@@ -202,6 +213,7 @@
                     </div>
                     <div class="btn-row">
                         <button style="background: var(--success);" onclick="saveEntryEdits()">💾 Save Changes</button>
+                        <button style="background: var(--warn); color: #202124;" onclick="refreshImageCacheForCurrentEdit()">🔄 Refresh Image Cache</button>
                         <button style="background: var(--danger);" onclick="deleteEntryConfirm()">🗑️ Delete Entry</button>
                         <button style="background: #5f6368;" onclick="closeEditEntry()">Cancel</button>
                     </div>
@@ -217,6 +229,7 @@
         let currentCorrectWord = null;
         let sessionCorrect = 0;
         let sessionWrong = 0;
+        const APP_LOGO_URL = new URL('logo.png', window.location.href).href;
 
         // Load config from localStorage on boot to save typing
         window.onload = function() {
@@ -411,9 +424,15 @@
                 const tagEl = document.createElement('div');
                 tagEl.className = 'mc-tag';
                 tagEl.innerText = word.tag || 'general';
+                const refreshBtn = document.createElement('button');
+                refreshBtn.className = 'mc-refresh-btn';
+                refreshBtn.title = 'Force refresh cached image';
+                refreshBtn.innerText = '🔄';
+                refreshBtn.onclick = (e) => quickRefreshImageCache(word.id, e);
                 card.appendChild(img);
                 card.appendChild(label);
                 card.appendChild(tagEl);
+                card.appendChild(refreshBtn);
                 listEl.appendChild(card);
             });
         }
@@ -448,6 +467,47 @@
             const reader = new FileReader();
             reader.onload = (e) => { document.getElementById('editImagePreview').src = e.target.result; };
             reader.readAsDataURL(file);
+        }
+
+        // Bumps an entry's image URL with a fresh cache-busting timestamp and pushes the update.
+        // Useful when raw.githubusercontent.com's CDN is still serving a stale cached image
+        // after a file was replaced directly on GitHub (outside this app's upload flow).
+        async function refreshImageCacheForId(id) {
+            const entry = dictionaryDb.find(w => w.id === id);
+            if (!entry) throw new Error("Entry not found.");
+            if (!entry.imagePath) throw new Error("This entry has no image asset to refresh.");
+            const repo = document.getElementById('ghRepo').value;
+            const token = document.getElementById('ghToken').value;
+            if (!repo || !token) throw new Error("Missing GitHub Token or Repo path.");
+
+            entry.imageUrl = `https://raw.githubusercontent.com/${repo}/main/${entry.imagePath}?v=${Date.now()}`;
+            await pushToGitHub();
+            return entry.imageUrl;
+        }
+
+        async function quickRefreshImageCache(id, event) {
+            if (event) event.stopPropagation();
+            try {
+                await refreshImageCacheForId(id);
+                renderManageList();
+            } catch (err) {
+                alert(`Failed to refresh cache: ${err.message}`);
+            }
+        }
+
+        async function refreshImageCacheForCurrentEdit() {
+            if (!editingOriginalEntry) return;
+            const statusMsg = document.getElementById('editStatusMsg');
+            statusMsg.innerText = "Refreshing image cache...";
+            try {
+                const newUrl = await refreshImageCacheForId(editingOriginalEntry.id);
+                editingOriginalEntry.imageUrl = newUrl;
+                document.getElementById('editImagePreview').src = newUrl;
+                statusMsg.innerText = "✅ Cache refreshed! The new image should now show up everywhere.";
+                renderManageList();
+            } catch (err) {
+                statusMsg.innerText = `❌ Error: ${err.message}`;
+            }
         }
 
         async function deleteGithubAsset(path) {
@@ -820,7 +880,7 @@
         // --- TRAINER QUIZ ENGINE ---
         async function loadNewQuizQuestion() {
             const filterTag = document.getElementById('quizTagFilter').value;
-            const mode = document.getElementById('quizModeFilter').value;
+            const mode = document.getElementById('quizModeFilter').value; // 'listen_image' | 'listen_char' | 'read_image'
             let records = [...dictionaryDb];
             if (filterTag !== 'all') { records = records.filter(r => r.tag === filterTag); }
 
@@ -838,20 +898,31 @@
 
             const randomIndex = Math.floor(Math.random() * records.length);
             currentCorrectWord = records[randomIndex];
-            document.getElementById('quizChar').innerText = currentCorrectWord.cantonese;
 
+            const charEl = document.getElementById('quizChar');
             const jyutpingEl = document.getElementById('quizJyutping');
             const listenBtn = document.getElementById('listenBtn');
 
-            if (mode === 'reading') {
-                // Harder mode: no jyutping hint, no audio — read the characters and pick the meaning
-                jyutpingEl.style.display = 'none';
-                listenBtn.style.display = 'none';
-            } else {
+            if (mode === 'listen_image') {
+                // Show characters + jyutping, autoplay audio, pick the matching image
+                charEl.style.display = 'block';
+                charEl.innerText = currentCorrectWord.cantonese;
                 jyutpingEl.style.display = 'block';
                 jyutpingEl.innerText = `Jyutping: ${currentCorrectWord.jyutping}`;
                 listenBtn.style.display = 'inline-block';
                 playQuizAudio();
+            } else if (mode === 'listen_char') {
+                // Hide characters + jyutping entirely — must recognize purely by ear
+                charEl.style.display = 'none';
+                jyutpingEl.style.display = 'none';
+                listenBtn.style.display = 'inline-block';
+                playQuizAudio();
+            } else if (mode === 'read_image') {
+                // Show characters only, no audio until after answering
+                charEl.style.display = 'block';
+                charEl.innerText = currentCorrectWord.cantonese;
+                jyutpingEl.style.display = 'none';
+                listenBtn.style.display = 'none';
             }
 
             const decoys = records.filter(r => r.id !== currentCorrectWord.id);
@@ -861,16 +932,17 @@
             const gridEl = document.getElementById('quizGrid');
             gridEl.innerHTML = '';
 
-            if (mode === 'reading') {
+            if (mode === 'listen_char') {
                 choicesList.forEach(word => {
                     const optionBtn = document.createElement('div');
-                    optionBtn.className = 'quiz-text-option';
+                    optionBtn.className = 'quiz-char-option';
                     optionBtn.dataset.wordId = word.id;
                     optionBtn.onclick = () => verifyQuizAnswer(optionBtn, word.id);
-                    optionBtn.innerText = word.english;
+                    optionBtn.innerText = word.cantonese;
                     gridEl.appendChild(optionBtn);
                 });
             } else {
+                // listen_image and read_image both use image choices
                 choicesList.forEach(word => {
                     const optionBtn = document.createElement('div');
                     optionBtn.className = 'quiz-option';
@@ -887,6 +959,7 @@
         function verifyQuizAnswer(selectedElement, selectedId) {
             if (document.getElementById('nextBtn').style.display === 'block') return;
             const feedbackEl = document.getElementById('quizFeedback');
+            const mode = document.getElementById('quizModeFilter').value;
 
             if (selectedId === currentCorrectWord.id) {
                 sessionCorrect++;
@@ -896,12 +969,18 @@
                 sessionWrong++;
                 selectedElement.classList.add('wrong');
                 feedbackEl.innerHTML = `<span style="color: var(--danger);">❌ Not quite — the correct answer was "${currentCorrectWord.english}".</span>`;
-                document.querySelectorAll('.quiz-option, .quiz-text-option').forEach(opt => {
+                document.querySelectorAll('.quiz-option, .quiz-text-option, .quiz-char-option').forEach(opt => {
                     if (opt.dataset.wordId === currentCorrectWord.id) opt.classList.add('correct');
                 });
             }
             document.getElementById('nextBtn').style.display = 'block';
             updateSessionStats();
+
+            if (mode === 'read_image') {
+                // Reveal the listen button and play the correct pronunciation either way, for learning reinforcement
+                document.getElementById('listenBtn').style.display = 'inline-block';
+                playQuizAudio();
+            }
         }
 
         function updateSessionStats() {
@@ -938,11 +1017,15 @@
                 body { margin: 0; font-family: sans-serif; }
                 .page-break { page-break-after: always; clear: both; }
                 .grid-sheet { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 7.5in; height: 10in; box-sizing: border-box; }
-                .card-frame { border: 1px dashed #bbb; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; height: 5in; width: 3.75in; }
+                .card-frame { border: 1px dashed #bbb; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; height: 5in; width: 3.75in; position: relative; }
                 .front-img { width: 2.2in; height: 2.2in; object-fit: cover; border-radius: 6px; margin-bottom: 12px; }
                 .front-title { font-size: 24px; font-weight: bold; }
                 .front-phonetic { font-size: 16px; color: #555; font-style: italic; }
+                .front-chinese { font-size: 28px; font-weight: bold; color: #4285f4; margin-top: 4px; }
                 .back-char { font-size: 64px; font-weight: bold; }
+                .card-brand { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
+                .card-brand img { width: 30px; height: 30px; }
+                .card-brand span { font-size: 11px; font-weight: bold; color: #999; letter-spacing: 0.5px; margin-top: 2px; }
             </style>`;
 
             for (let i = 0; i < records.length; i += cardsPerPage) {
@@ -953,7 +1036,7 @@
                 pageChunk.forEach(word => {
                     if (word.id) {
                         const src = word.imageUrl || `data:image/png;base64,${word.imageBytes}`;
-                        totalHtml += `<div class="card-frame"><img class="front-img" src="${src}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div></div>`;
+                        totalHtml += `<div class="card-frame"><img class="front-img" src="${src}"><div class="front-title">${word.english}</div><div class="front-phonetic">${word.jyutping}</div><div class="front-chinese">${word.cantonese}</div><div class="card-brand"><img src="${APP_LOGO_URL}"><span>Trac Lingo</span></div></div>`;
                     } else {
                         totalHtml += `<div class="card-frame"></div>`;
                     }
@@ -964,7 +1047,7 @@
                 [1, 0, 3, 2].forEach(index => {
                     const word = pageChunk[index];
                     if (word && word.id) {
-                        totalHtml += `<div class="card-frame"><div class="back-char">${word.cantonese}</div></div>`;
+                        totalHtml += `<div class="card-frame"><div class="back-char">${word.cantonese}</div><div class="card-brand"><img src="${APP_LOGO_URL}"><span>Trac Lingo</span></div></div>`;
                     } else {
                         totalHtml += `<div class="card-frame"></div>`;
                     }
