@@ -1,14 +1,5 @@
 [
   {
-    "id": "blue",
-    "english": "blue",
-    "cantonese": "藍色",
-    "jyutping": "laam4 sik1",
-    "tag": "colors",
-    "imagePath": "assets/blue.png",
-    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/blue.png?v=1783140333148"
-  },
-  {
     "id": "green",
     "english": "green",
     "cantonese": "綠色",
@@ -160,5 +151,14 @@
     "tag": "colors",
     "imagePath": "assets/red.png",
     "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/red.png?v=1783143406553"
+  },
+  {
+    "id": "blue",
+    "english": "blue",
+    "cantonese": "藍色",
+    "jyutping": "laam4 sik1",
+    "tag": "colors",
+    "imagePath": "assets/blue.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/blue.png?v=1783143413974"
   }
 ]
