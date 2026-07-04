@@ -52,6 +52,30 @@
         .edit-fields-col { flex: 1; min-width: 260px; }
         .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn-row button { flex: 0 0 auto; }
+
+        /* --- MOBILE RESPONSIVENESS --- */
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .card { padding: 16px; }
+            .nav { flex-wrap: wrap; gap: 6px; }
+            .nav-btn { flex: 1 1 auto; padding: 8px 10px; font-size: 13px; }
+            .input-group { flex-direction: column; }
+            .input-group > * { width: 100%; flex: none; box-sizing: border-box; }
+            .flex-header { flex-direction: column; align-items: stretch; gap: 12px; }
+            .flex-header > div { max-width: 100% !important; }
+            .quiz-char { font-size: 44px; margin: 12px 0 4px 0; }
+            .quiz-jyutping { font-size: 16px; margin-bottom: 15px; }
+            .quiz-grid { gap: 10px; }
+            .quiz-char-option { font-size: 28px; min-height: 70px; padding: 12px; }
+            .quiz-text-option { font-size: 16px; min-height: 70px; padding: 14px 10px; }
+            .manage-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
+            .edit-layout { flex-direction: column; }
+            .edit-image-col { flex: none; width: 100%; text-align: center; }
+            .edit-image-col img { width: 140px; height: 140px; }
+            .btn-row { flex-direction: column; }
+            .btn-row button { width: 100%; }
+            .stats-badge { display: block; margin-bottom: 8px; }
+        }
     </style>
 </head>
 <body>
