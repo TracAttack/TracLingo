@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Cantonese Flashcard Dictionary & Trainer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #4285f4; --success: #34a853; --warn: #f4b400; --danger: #ea4335; --bg: #f8f9fa; --text: #202124; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); max-width: 1000px; margin: 0 auto; padding: 20px; }
@@ -103,7 +104,7 @@
     <div id="tab-trainer" class="tab-content active">
         <div style="text-align: center; margin-bottom: 15px;">
             <img id="brandLogo" src="logo.png" alt="Trac Lingo logo" style="width: 60px; height: 60px; display: block; margin: 0 auto;">
-            <div style="font-weight: bold; font-size: 20px; color: var(--primary); margin-top: 4px; letter-spacing: 0.5px;">Trac Lingo</div>
+            <div style="font-weight: 700; font-size: 24px; color: var(--danger); margin-top: 4px; letter-spacing: 0.5px; font-family: 'Fredoka', cursive;">Trac Lingo</div>
         </div>
         <div class="card">
             <div class="flex-header">
@@ -1040,19 +1041,20 @@
             const cardsPerPage = 4;
             let totalHtml = "";
             const printStyles = `<style>
+                @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600&display=swap');
                 @page { size: letter portrait; margin: 0.5in; }
                 body { margin: 0; font-family: sans-serif; }
                 .page-break { page-break-after: always; clear: both; }
                 .grid-sheet { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 7.5in; height: 10in; box-sizing: border-box; }
-                .card-frame { border: 1px dashed #bbb; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; height: 5in; width: 3.75in; position: relative; }
-                .front-img { width: 2.2in; height: 2.2in; object-fit: cover; border-radius: 6px; margin-bottom: 12px; }
+                .card-frame { border: 1px dashed #bbb; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 22px 20px 50px 20px; box-sizing: border-box; text-align: center; height: 5in; width: 3.75in; position: relative; }
+                .front-img { width: 2.0in; height: 2.0in; object-fit: cover; border-radius: 6px; margin-top: 8px; margin-bottom: 12px; }
                 .front-title { font-size: 24px; font-weight: bold; }
                 .front-phonetic { font-size: 16px; color: #555; font-style: italic; }
                 .front-chinese { font-size: 28px; font-weight: bold; color: #4285f4; margin-top: 4px; }
-                .back-char { font-size: 64px; font-weight: bold; }
-                .card-brand { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
+                .back-char { font-size: 64px; font-weight: bold; margin-top: 20px; }
+                .card-brand { position: absolute; bottom: 16px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
                 .card-brand img { width: 30px; height: 30px; }
-                .card-brand span { font-size: 11px; font-weight: bold; color: #999; letter-spacing: 0.5px; margin-top: 2px; }
+                .card-brand span { font-family: 'Fredoka', cursive; font-size: 15px; font-weight: 600; color: #d32f2f; letter-spacing: 0.5px; margin-top: 3px; }
             </style>`;
 
             for (let i = 0; i < records.length; i += cardsPerPage) {
