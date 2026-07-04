@@ -35,7 +35,7 @@
     "imagePath": "assets/yellow.png",
     "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/yellow.png?v=1783140345741"
   },
-   {
+  {
     "id": "har_gao",
     "english": "har gao",
     "cantonese": "蝦餃",
@@ -124,5 +124,41 @@
     "tag": "food",
     "imagePath": "assets/dan_tat.png",
     "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/dan_tat.png"
+  },
+  {
+    "id": "dog",
+    "english": "Dog",
+    "cantonese": "狗",
+    "jyutping": "gau2",
+    "tag": "animals",
+    "imagePath": "assets/dog.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/dog.png?v=1783142515494"
+  },
+  {
+    "id": "cat",
+    "english": "Cat",
+    "cantonese": "貓",
+    "jyutping": "maau1",
+    "tag": "animals",
+    "imagePath": "assets/cat.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/cat.png?v=1783142521923"
+  },
+  {
+    "id": "bird",
+    "english": "Bird",
+    "cantonese": "雀",
+    "jyutping": "zoek3",
+    "tag": "animals",
+    "imagePath": "assets/bird.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/bird.png?v=1783142527839"
+  },
+  {
+    "id": "fish",
+    "english": "Fish",
+    "cantonese": "魚",
+    "jyutping": "jyu4",
+    "tag": "animals",
+    "imagePath": "assets/fish.png",
+    "imageUrl": "https://raw.githubusercontent.com/TracAttack/TracLingo/main/assets/fish.png?v=1783142533942"
   }
 ]
